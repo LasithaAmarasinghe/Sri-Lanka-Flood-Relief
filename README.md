@@ -13,6 +13,13 @@ Real-time interactive map showing flood relief requests and volunteer contributi
 - 📱 Mobile-responsive design
 - 🔄 Auto-refresh every 2 minutes
 
+## Map Legend
+- 🔴 **Emergency** - Immediate action needed
+- 🟠 **High Urgency**
+- 🟡 **Medium Urgency**
+- 🟢 **Low Urgency**
+- 🔵 **Available Contribution**
+
 ## Local Development
 
 ```bash
