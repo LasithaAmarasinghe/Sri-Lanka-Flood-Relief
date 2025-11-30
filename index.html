@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri Lanka Flood Relief - Live Crisis Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            position: relative;
+        }
+
+        #header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        #header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        #main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        #sidebar {
+            width: 350px;
+            background: #f8f9fa;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+
+        .stats-panel {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card.requests {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-card.contributions {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filters-panel {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .apply-filters-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        .apply-filters-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .apply-filters-btn:active {
+            transform: translateY(0);
+        }
+
+        .legend-panel {
+            background: white;
+            padding: 20px;
+        }
+
+        .legend-panel h3 {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .legend-marker {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .legend-marker.emergency { background: #dc3545; }
+        .legend-marker.high { background: #fd7e14; }
+        .legend-marker.medium { background: #ffc107; }
+        .legend-marker.low { background: #28a745; }
+        .legend-marker.contribution { background: #007bff; }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px 50px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 2000;
+            text-align: center;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom marker styles */
+        .custom-marker {
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .popup-content {
+            padding: 10px;
+            min-width: 250px;
+        }
+
+        .popup-content h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .popup-content .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 5px;
+            margin-bottom: 10px;
+        }
+
+        .badge.emergency { background: #dc3545; color: white; }
+        .badge.high { background: #fd7e14; color: white; }
+        .badge.medium { background: #ffc107; color: #333; }
+        .badge.low { background: #28a745; color: white; }
+        .badge.contribution { background: #007bff; color: white; }
+
+        .popup-content .info-row {
+            margin: 8px 0;
+            font-size: 13px;
+            display: flex;
+            align-items: start;
+        }
+
+        .popup-content .info-row strong {
+            min-width: 80px;
+            color: #666;
+        }
+
+        .popup-content .contact {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .popup-content .contact a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .popup-content .contact a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                position: absolute;
+                left: -350px;
+                z-index: 1001;
+                height: 100%;
+                transition: left 0.3s;
+            }
+
+            #sidebar.open {
+                left: 0;
+            }
+
+            .mobile-menu-btn {
+                position: absolute;
+                top: 90px;
+                left: 10px;
+                z-index: 1002;
+                background: white;
+                border: none;
+                padding: 12px;
+                border-radius: 6px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                cursor: pointer;
+            }
+        }
+
+        .refresh-info {
+            text-align: center;
+            padding: 15px;
+            background: #e3f2fd;
+            color: #1976d2;
+            font-size: 12px;
+            border-top: 1px solid #bbdefb;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>🚨 Sri Lanka Flood Relief - Live Crisis Map</h1>
+        <div class="subtitle">Real-time help requests and volunteer contributions • November 30, 2025</div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading relief data...</div>
+    </div>
+
+    <div id="main-container">
+        <div id="sidebar">
+            <div class="stats-panel">
+                <h2 style="font-size: 16px; margin-bottom: 5px;">Live Statistics</h2>
+                <div class="stat-grid">
+                    <div class="stat-card requests">
+                        <div class="stat-number" id="totalRequests">0</div>
+                        <div class="stat-label">Help Requests</div>
+                    </div>
+                    <div class="stat-card contributions">
+                        <div class="stat-number" id="totalContributions">0</div>
+                        <div class="stat-label">Contributors</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filters-panel">
+                <h2 style="font-size: 16px; margin-bottom: 15px;">Filters</h2>
+                
+                <div class="filter-group">
+                    <label>Data Type</label>
+                    <select id="typeFilter">
+                        <option value="all">All (Requests + Contributions)</option>
+                        <option value="requests">Help Requests Only</option>
+                        <option value="contributions">Contributions Only</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Urgency Level</label>
+                    <select id="urgencyFilter">
+                        <option value="all">All Urgency Levels</option>
+                        <option value="emergency">🔴 Emergency</option>
+                        <option value="high">🟠 High</option>
+                        <option value="medium">🟡 Medium</option>
+                        <option value="low">🟢 Low</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Establishment Type</label>
+                    <select id="establishmentFilter">
+                        <option value="all">All Types</option>
+                        <option value="School">School</option>
+                        <option value="Temple">Temple</option>
+                        <option value="Home">Home</option>
+                        <option value="Kitchen">Kitchen</option>
+                        <option value="Dispensary">Dispensary</option>
+                        <option value="Tent">Tent</option>
+                        <option value="Private Land">Private Land</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Search Location/Notes</label>
+                    <input type="text" id="searchFilter" placeholder="Search by location, name, or needs...">
+                </div>
+
+                <button class="apply-filters-btn" onclick="applyFilters()">🔍 Apply Filters</button>
+            </div>
+
+            <div class="legend-panel">
+                <h3>Map Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-marker emergency"></div>
+                    <span>Emergency - Immediate action needed</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker high"></div>
+                    <span>High Urgency</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker medium"></div>
+                    <span>Medium Urgency</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker low"></div>
+                    <span>Low Urgency</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker contribution"></div>
+                    <span>Available Contribution</span>
+                </div>
+            </div>
+
+            <div class="refresh-info">
+                Data refreshes automatically every 2 minutes
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize map centered on Sri Lanka
+        const map = L.map('map').setView([7.8731, 80.7718], 8);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // API configuration
+        const API_BASE_URL = 'https://cynwvkagfmhlpsvkparv.supabase.co/functions/v1/public-data-api';
+        
+        let markersLayer = L.layerGroup().addTo(map);
+        let allData = null;
+
+        // Marker color mapping
+        const urgencyColors = {
+            emergency: '#dc3545',
+            high: '#fd7e14',
+            medium: '#ffc107',
+            low: '#28a745'
+        };
+
+        // Create custom icon
+        function createMarkerIcon(color, isContribution = false) {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4);"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+        }
+
+        // Format popup content for help requests
+        function createRequestPopup(request) {
+            const peopleCount = (request.num_men || 0) + (request.num_women || 0) + (request.num_children || 0);
+            
+            return `
+                <div class="popup-content">
+                    <h3>🆘 Help Request</h3>
+                    <span class="badge ${request.urgency}">${request.urgency.toUpperCase()}</span>
+                    
+                    <div class="info-row">
+                        <strong>Contact:</strong>
+                        <span>${request.full_name || 'Unknown'}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>People:</strong>
+                        <span>${peopleCount} (👨 ${request.num_men || 0} | 👩 ${request.num_women || 0} | 👶 ${request.num_children || 0})</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>Location:</strong>
+                        <span>${request.establishment_type || 'Unknown'}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>Address:</strong>
+                        <span>${request.address}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>Needs:</strong>
+                        <span>${request.assistance_types.join(', ')}</span>
+                    </div>
+                    
+                    ${request.additional_notes ? `
+                        <div class="info-row">
+                            <strong>Notes:</strong>
+                            <span>${request.additional_notes}</span>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="contact">
+                        📞 <a href="tel:${request.mobile_number}">${request.mobile_number}</a>
+                        ${request.mobile_number_2 ? `<br>📞 <a href="tel:${request.mobile_number_2}">${request.mobile_number_2}</a>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Format popup content for contributions
+        function createContributionPopup(contribution) {
+            const types = [];
+            if (contribution.goods_types) types.push(`📦 Goods: ${contribution.goods_types.join(', ')}`);
+            if (contribution.services_types) types.push(`🛠️ Services: ${contribution.services_types.join(', ')}`);
+            if (contribution.labor_types) types.push(`💪 Labor: ${contribution.labor_types.join(', ')}`);
+            
+            return `
+                <div class="popup-content">
+                    <h3>🤝 Volunteer Contribution</h3>
+                    <span class="badge contribution">AVAILABLE</span>
+                    ${contribution.verified ? '<span class="badge" style="background: #28a745; color: white;">✓ VERIFIED</span>' : ''}
+                    
+                    <div class="info-row">
+                        <strong>Name:</strong>
+                        <span>${contribution.full_name}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>Location:</strong>
+                        <span>${contribution.address}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>Coverage:</strong>
+                        <span>${contribution.coverage_radius_km} km radius</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <strong>Offering:</strong>
+                        <span>${types.join('<br>')}</span>
+                    </div>
+                    
+                    ${contribution.availability_notes ? `
+                        <div class="info-row">
+                            <strong>Available:</strong>
+                            <span>${contribution.availability_notes}</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${contribution.pickup_required ? '<div class="info-row">🚚 <strong>Pickup Required</strong></div>' : ''}
+                    
+                    <div class="contact">
+                        📞 <a href="tel:${contribution.mobile_number}">${contribution.mobile_number}</a>
+                        ${contribution.email ? `<br>✉️ <a href="mailto:${contribution.email}">${contribution.email}</a>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add markers to map
+        function addMarkers(data) {
+            markersLayer.clearLayers();
+            
+            // Add request markers
+            data.requests.forEach(request => {
+                if (request.latitude && request.longitude) {
+                    const color = urgencyColors[request.urgency] || '#6c757d';
+                    const marker = L.marker([request.latitude, request.longitude], {
+                        icon: createMarkerIcon(color)
+                    });
+                    
+                    marker.bindPopup(createRequestPopup(request), {
+                        maxWidth: 300
+                    });
+                    
+                    marker.addTo(markersLayer);
+                }
+            });
+            
+            // Add contribution markers
+            data.contributions.forEach(contribution => {
+                if (contribution.latitude && contribution.longitude) {
+                    const marker = L.marker([contribution.latitude, contribution.longitude], {
+                        icon: createMarkerIcon('#007bff', true)
+                    });
+                    
+                    marker.bindPopup(createContributionPopup(contribution), {
+                        maxWidth: 300
+                    });
+                    
+                    marker.addTo(markersLayer);
+                }
+            });
+
+            // Fit map to show all markers if there are any
+            if (markersLayer.getLayers().length > 0) {
+                try {
+                    const group = new L.featureGroup(markersLayer.getLayers());
+                    map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                } catch (e) {
+                    console.log('Could not fit bounds:', e);
+                }
+            }
+        }
+
+        // Update statistics
+        function updateStats(data) {
+            document.getElementById('totalRequests').textContent = data.meta.total_requests;
+            document.getElementById('totalContributions').textContent = data.meta.total_contributions;
+        }
+
+        // Fetch data from API
+        async function fetchData(params = {}) {
+            const queryParams = new URLSearchParams(params);
+            const url = `${API_BASE_URL}?${queryParams.toString()}`;
+            
+            try {
+                console.log('Fetching from:', url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data received:', data);
+                allData = data;
+                
+                addMarkers(data);
+                updateStats(data);
+                
+                document.getElementById('loading').classList.add('hidden');
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                console.error('Error details:', error.message);
+                
+                // Show more detailed error message
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 3000; max-width: 500px;';
+                errorMsg.innerHTML = `
+                    <h3 style="color: #dc3545; margin-bottom: 15px;">⚠️ Connection Error</h3>
+                    <p style="margin-bottom: 10px;">Failed to load relief data from the API.</p>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Error: ${error.message}</p>
+                    <p style="font-size: 12px; color: #666; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                        <strong>Possible causes:</strong><br>
+                        • Network connectivity issue<br>
+                        • API server is temporarily down<br>
+                        • CORS policy restriction
+                    </p>
+                    <button onclick="location.reload()" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 15px;">
+                        🔄 Retry
+                    </button>
+                `;
+                document.body.appendChild(errorMsg);
+                
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const params = {
+                limit: 500
+            };
+            
+            const type = document.getElementById('typeFilter').value;
+            if (type !== 'all') params.type = type;
+            
+            const urgency = document.getElementById('urgencyFilter').value;
+            if (urgency !== 'all') params.urgency = urgency;
+            
+            const establishment = document.getElementById('establishmentFilter').value;
+            if (establishment !== 'all') params.establishment = establishment;
+            
+            const search = document.getElementById('searchFilter').value.trim();
+            if (search) params.search = search;
+            
+            document.getElementById('loading').classList.remove('hidden');
+            fetchData(params);
+        }
+
+        // Initial load
+        fetchData({ limit: 500 });
+
+        // Auto-refresh every 2 minutes
+        setInterval(() => {
+            const params = { limit: 500 };
+            
+            const type = document.getElementById('typeFilter').value;
+            if (type !== 'all') params.type = type;
+            
+            const urgency = document.getElementById('urgencyFilter').value;
+            if (urgency !== 'all') params.urgency = urgency;
+            
+            const establishment = document.getElementById('establishmentFilter').value;
+            if (establishment !== 'all') params.establishment = establishment;
+            
+            const search = document.getElementById('searchFilter').value.trim();
+            if (search) params.search = search;
+            
+            fetchData(params);
+        }, 120000); // 2 minutes
+    </script>
+</body>
+</html>
