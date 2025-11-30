@@ -333,12 +333,136 @@
             font-size: 12px;
             border-top: 1px solid #bbdefb;
         }
+
+        .emergency-alert {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            font-weight: 600;
+            animation: pulse 2s infinite;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .analytics-panel {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .urgency-breakdown {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .urgency-bar {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .urgency-bar-label {
+            width: 80px;
+            font-weight: 600;
+        }
+
+        .urgency-bar-fill {
+            flex: 1;
+            height: 20px;
+            border-radius: 4px;
+            margin: 0 10px;
+            position: relative;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+
+        .urgency-bar-progress {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .urgency-bar-count {
+            font-weight: 600;
+            min-width: 30px;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-gps {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .location-search-panel {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            margin: 15px 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .location-search-panel.active {
+            display: block;
+        }
+
+        .location-search-panel input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin: 5px 0;
+        }
+
+        .distance-badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="header">
         <h1>🚨 Sri Lanka Flood Relief - Live Crisis Map</h1>
         <div class="subtitle">Real-time help requests and volunteer contributions • November 30, 2025</div>
+    </div>
+
+    <div id="emergencyAlert" class="emergency-alert" style="display: none;" onclick="filterEmergency()">
+        <span id="emergencyCount">0</span> EMERGENCY REQUESTS - Click to view
     </div>
 
     <div class="loading" id="loading">
@@ -358,6 +482,54 @@
                     <div class="stat-card contributions">
                         <div class="stat-number" id="totalContributions">0</div>
                         <div class="stat-label">Contributors</div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn btn-gps" onclick="toggleLocationSearch()">📍 Near Me</button>
+                    <button class="action-btn btn-export" onclick="exportData()">💾 Export Data</button>
+                </div>
+            </div>
+
+            <div id="locationSearchPanel" class="location-search-panel">
+                <strong>🎯 Find Help Near You</strong>
+                <button onclick="getUserLocation()" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 6px; margin: 10px 0; cursor: pointer;">📍 Use My Location</button>
+                <div style="text-align: center; margin: 10px 0; color: #666;">or enter manually</div>
+                <input type="number" id="manualLat" placeholder="Latitude (e.g., 6.9271)" step="any">
+                <input type="number" id="manualLng" placeholder="Longitude (e.g., 79.8612)" step="any">
+                <input type="number" id="radiusKm" placeholder="Radius in km (e.g., 20)" value="20">
+                <button onclick="searchByLocation()" style="width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 6px; margin-top: 10px; cursor: pointer;">🔍 Search</button>
+            </div>
+
+            <div class="analytics-panel">
+                <h3 style="font-size: 14px; margin-bottom: 10px;">📊 Urgency Breakdown</h3>
+                <div class="urgency-breakdown">
+                    <div class="urgency-bar">
+                        <div class="urgency-bar-label">🔴 Emergency</div>
+                        <div class="urgency-bar-fill">
+                            <div class="urgency-bar-progress" id="emergencyBar" style="background: #dc3545;"></div>
+                        </div>
+                        <div class="urgency-bar-count" id="emergencyCount2">0</div>
+                    </div>
+                    <div class="urgency-bar">
+                        <div class="urgency-bar-label">🟠 High</div>
+                        <div class="urgency-bar-fill">
+                            <div class="urgency-bar-progress" id="highBar" style="background: #fd7e14;"></div>
+                        </div>
+                        <div class="urgency-bar-count" id="highCount">0</div>
+                    </div>
+                    <div class="urgency-bar">
+                        <div class="urgency-bar-label">🟡 Medium</div>
+                        <div class="urgency-bar-fill">
+                            <div class="urgency-bar-progress" id="mediumBar" style="background: #ffc107;"></div>
+                        </div>
+                        <div class="urgency-bar-count" id="mediumCount">0</div>
+                    </div>
+                    <div class="urgency-bar">
+                        <div class="urgency-bar-label">🟢 Low</div>
+                        <div class="urgency-bar-fill">
+                            <div class="urgency-bar-progress" id="lowBar" style="background: #28a745;"></div>
+                        </div>
+                        <div class="urgency-bar-count" id="lowCount">0</div>
                     </div>
                 </div>
             </div>
@@ -401,11 +573,21 @@
                 </div>
 
                 <div class="filter-group">
+                    <label>Verified Contributions</label>
+                    <select id="verifiedFilter">
+                        <option value="all">All (Verified + Unverified)</option>
+                        <option value="true">✓ Verified Only</option>
+                        <option value="false">Unverified Only</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
                     <label>Search Location/Notes</label>
                     <input type="text" id="searchFilter" placeholder="Search by location, name, or needs...">
                 </div>
 
                 <button class="apply-filters-btn" onclick="applyFilters()">🔍 Apply Filters</button>
+                <button class="apply-filters-btn" onclick="clearFilters()" style="background: #6c757d; margin-top: 5px;">🔄 Clear Filters</button>
             </div>
 
             <div class="legend-panel">
@@ -511,6 +693,13 @@
                         <span>${request.assistance_types.join(', ')}</span>
                     </div>
                     
+                    ${request.distance_km ? `
+                        <div class="info-row">
+                            <strong>Distance:</strong>
+                            <span class="distance-badge">${request.distance_km.toFixed(1)} km away</span>
+                        </div>
+                    ` : ''}
+                    
                     ${request.additional_notes ? `
                         <div class="info-row">
                             <strong>Notes:</strong>
@@ -568,6 +757,13 @@
                     
                     ${contribution.pickup_required ? '<div class="info-row">🚚 <strong>Pickup Required</strong></div>' : ''}
                     
+                    ${contribution.distance_km ? `
+                        <div class="info-row">
+                            <strong>Distance:</strong>
+                            <span class="distance-badge">${contribution.distance_km.toFixed(1)} km away</span>
+                        </div>
+                    ` : ''}
+                    
                     <div class="contact">
                         📞 <a href="tel:${contribution.mobile_number}">${contribution.mobile_number}</a>
                         ${contribution.email ? `<br>✉️ <a href="mailto:${contribution.email}">${contribution.email}</a>` : ''}
@@ -622,10 +818,46 @@
             }
         }
 
-        // Update statistics
+        // Update statistics and analytics
         function updateStats(data) {
             document.getElementById('totalRequests').textContent = data.meta.total_requests;
             document.getElementById('totalContributions').textContent = data.meta.total_contributions;
+            
+            // Update urgency breakdown
+            const urgencyCounts = {
+                emergency: 0,
+                high: 0,
+                medium: 0,
+                low: 0
+            };
+            
+            data.requests.forEach(req => {
+                if (urgencyCounts.hasOwnProperty(req.urgency)) {
+                    urgencyCounts[req.urgency]++;
+                }
+            });
+            
+            const total = data.requests.length || 1;
+            
+            document.getElementById('emergencyCount2').textContent = urgencyCounts.emergency;
+            document.getElementById('highCount').textContent = urgencyCounts.high;
+            document.getElementById('mediumCount').textContent = urgencyCounts.medium;
+            document.getElementById('lowCount').textContent = urgencyCounts.low;
+            
+            document.getElementById('emergencyBar').style.width = `${(urgencyCounts.emergency / total) * 100}%`;
+            document.getElementById('highBar').style.width = `${(urgencyCounts.high / total) * 100}%`;
+            document.getElementById('mediumBar').style.width = `${(urgencyCounts.medium / total) * 100}%`;
+            document.getElementById('lowBar').style.width = `${(urgencyCounts.low / total) * 100}%`;
+            
+            // Show emergency alert if there are emergency requests
+            const emergencyAlert = document.getElementById('emergencyAlert');
+            const emergencyCountSpan = document.getElementById('emergencyCount');
+            if (urgencyCounts.emergency > 0) {
+                emergencyAlert.style.display = 'block';
+                emergencyCountSpan.textContent = urgencyCounts.emergency;
+            } else {
+                emergencyAlert.style.display = 'none';
+            }
         }
 
         // Fetch data from API
@@ -683,6 +915,88 @@
             }
         }
 
+        // Toggle location search panel
+        function toggleLocationSearch() {
+            const panel = document.getElementById('locationSearchPanel');
+            panel.classList.toggle('active');
+        }
+
+        // Get user's current location
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('manualLat').value = position.coords.latitude.toFixed(6);
+                        document.getElementById('manualLng').value = position.coords.longitude.toFixed(6);
+                        alert('✅ Location captured! Click Search to find nearby help.');
+                    },
+                    (error) => {
+                        alert('❌ Unable to get your location. Please enter manually.');
+                    }
+                );
+            } else {
+                alert('❌ Geolocation is not supported by your browser.');
+            }
+        }
+
+        // Search by location with radius
+        function searchByLocation() {
+            const lat = parseFloat(document.getElementById('manualLat').value);
+            const lng = parseFloat(document.getElementById('manualLng').value);
+            const radius = parseFloat(document.getElementById('radiusKm').value) || 20;
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('Please enter valid coordinates or use "Use My Location" button.');
+                return;
+            }
+            
+            document.getElementById('loading').classList.remove('hidden');
+            fetchData({ 
+                limit: 500,
+                lat: lat,
+                lng: lng,
+                radius_km: radius,
+                sort: 'distance'
+            });
+        }
+
+        // Filter for emergency only
+        function filterEmergency() {
+            document.getElementById('urgencyFilter').value = 'emergency';
+            applyFilters();
+        }
+
+        // Export data as JSON
+        function exportData() {
+            if (!allData) {
+                alert('No data to export yet.');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(allData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `flood-relief-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('urgencyFilter').value = 'all';
+            document.getElementById('establishmentFilter').value = 'all';
+            document.getElementById('verifiedFilter').value = 'all';
+            document.getElementById('searchFilter').value = '';
+            document.getElementById('manualLat').value = '';
+            document.getElementById('manualLng').value = '';
+            document.getElementById('radiusKm').value = '20';
+            document.getElementById('locationSearchPanel').classList.remove('active');
+            applyFilters();
+        }
+
         // Apply filters
         function applyFilters() {
             const params = {
@@ -697,6 +1011,9 @@
             
             const establishment = document.getElementById('establishmentFilter').value;
             if (establishment !== 'all') params.establishment = establishment;
+            
+            const verified = document.getElementById('verifiedFilter').value;
+            if (verified !== 'all') params.verified = verified;
             
             const search = document.getElementById('searchFilter').value.trim();
             if (search) params.search = search;
