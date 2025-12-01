@@ -2,10 +2,6 @@
 
 Real-time interactive map showing flood relief requests and volunteer contributions across Sri Lanka.
 
-## 🌐 Live Site
-
-**Visit the live crisis map:** [https://flood-relief-brown.vercel.app/](https://flood-relief-brown.vercel.app/)
-
 ## Features
 - 🗺️ Live crisis map with color-coded urgency markers
 - 📊 Real-time statistics dashboard
