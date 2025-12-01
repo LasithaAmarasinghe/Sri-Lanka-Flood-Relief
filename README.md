@@ -2,6 +2,10 @@
 
 Real-time interactive map showing flood relief requests and volunteer contributions across Sri Lanka.
 
+<p align="center">
+  <img src="https://github.com/LasithaAmarasinghe/Sri-Lanka-Flood-Relief/blob/main/flood.gif" alt="Demo GIF" />
+</p>
+
 ## Features
 - 🗺️ Live crisis map with color-coded urgency markers
 - 📊 Real-time statistics dashboard
