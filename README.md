@@ -7,18 +7,19 @@ Real-time interactive map showing flood relief requests and volunteer contributi
 </p>
 
 ## Features
-- 🗺️ Live crisis map with color-coded urgency markers
-- 📊 Real-time statistics dashboard
-- 🔍 Advanced filtering (urgency, location, establishment type)
-- 📱 Mobile-responsive design
-- 🔄 Auto-refresh every 2 minutes
+ 🗺️ Live crisis map with color-coded urgency markers <br>
+ 📊 Real-time statistics dashboard <br>
+ 🔍 Advanced filtering (urgency, location, establishment type) <br>
+ 📱 Mobile-responsive design <br>
+ 🔄 Auto-refresh every 2 minutes <br>
 
 ## Map Legend
-- 🔴 **Emergency** - Immediate action needed
-- 🟠 **High Urgency**
-- 🟡 **Medium Urgency**
-- 🟢 **Low Urgency**
-- 🔵 **Available Contribution**
+ 🔴 **Emergency** - Immediate action needed <br>
+ 🟠 **High Urgency** <br>
+ 🟡 **Medium Urgency** <br>
+ 🟢 **Low Urgency** <br>
+ 🔵 **Available Contribution** <br>
+ 
 
 ## Local Development
 
